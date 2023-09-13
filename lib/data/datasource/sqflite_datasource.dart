@@ -44,6 +44,8 @@ class SqlfliteDatasource implements IDatasource{
        ''');
 
 
+      if (chatWithLatestMessage.isEmpty) return[];
+
       final chatsWithUnreadMessages = await txn.rawQuery(''' SELECT chat_id, count(*) as unreadable_messages
       FROM messages
       WHERE receipt = ?
@@ -61,13 +63,17 @@ class SqlfliteDatasource implements IDatasource{
   }
 
   @override
-  Future<Chat> findChat(String chatId) async {
+  Future<Chat?> findChat(String chatId) async {
     return await _db.transaction((txn) async {
       final listOfMapChats = await txn.query(
         'chats',
         where: 'id = ?',
         whereArgs: [chatId]
       );
+
+      if (!listOfMapChats.isEmpty){
+        return null;
+      }
 
       final unread = Sqflite.firstIntValue(await txn.rawQuery(
           'SELECT COUNT(*) FROM MESSAGES WHERE chat_id = ? AND receipt = ?',

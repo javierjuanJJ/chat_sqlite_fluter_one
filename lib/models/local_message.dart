@@ -26,7 +26,8 @@ class LocalMessage{
       content: json['content'],
     );
 
-    final localMessage = LocalMessage(json['chat_id'], message, json['receipt']);
+    final localMessage = LocalMessage(json['chat_id'], message,
+        EnumParsing.fromString(json['receipt']));
     localMessage._id = json['id'];
     return localMessage;
   }

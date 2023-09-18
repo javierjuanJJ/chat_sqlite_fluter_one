@@ -1,5 +1,6 @@
 import 'package:chat2/composition_root.dart';
 import 'package:chat2/theme.dart';
+import 'package:chat2/ui/pages/home/home/home.dart';
 import 'package:chat2/ui/pages/onboarding/on_boarding.dart';
 import 'package:flutter/material.dart';
 
@@ -20,7 +21,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: lightTheme(context),
       darkTheme: darkTheme(context),
-      home: CompositionRoot.composeOnBoardingUI(),
+      home: CompositionRoot.composeHomeUi(),
     );
   }
 }

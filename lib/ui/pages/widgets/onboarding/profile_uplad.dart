@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:chat2/colors.dart';
 import 'package:chat2/theme.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../../states_management/onboarding/profile_image_cubit.dart';
 
 class ProfileUpload extends StatelessWidget {
   const ProfileUpload();
@@ -16,23 +21,29 @@ class ProfileUpload extends StatelessWidget {
         borderRadius: BorderRadius.circular(126.0),
         child: InkWell(
           borderRadius: BorderRadius.circular(126.0),
-          onTap: () {
-
+          onTap: () async {
+            await context.read<ProfileImageCubit>().getImage();
           },
           child: Stack(
             fit: StackFit.expand,
             children: [
               CircleAvatar(
-
                 backgroundColor: Colors.transparent,
-
-                child: Icon(
-                    Icons.person_outline_rounded,
-                  size: 126.0,
-                  color: isLightTheme(context) ? kIconLight : Colors.black,
-                ),
-
-
+                child: BlocBuilder<ProfileImageCubit, File?>(
+                    builder: (context, state) {
+                  return state == null
+                      ? Icon(
+                          Icons.person_outline_rounded,
+                          size: 126.0,
+                          color:
+                              isLightTheme(context) ? kIconLight : Colors.black,
+                        )
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(126.0),
+                          child: Image.file(state,
+                              width: 126, height: 126, fit: BoxFit.fill),
+                        );
+                }),
               ),
               Align(
                 alignment: Alignment.bottomRight,
@@ -43,9 +54,7 @@ class ProfileUpload extends StatelessWidget {
                 ),
               ),
             ],
-
           ),
-
         ),
       ),
     );

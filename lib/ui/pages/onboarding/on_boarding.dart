@@ -1,6 +1,10 @@
 import 'package:chat2/colors.dart';
+import 'package:chat2/states_management/onboarding/onboarding_cubit.dart';
+import 'package:chat2/states_management/onboarding/onboarding_state.dart';
+import 'package:chat2/states_management/onboarding/profile_image_cubit.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../widgets/onboarding/logo.dart';
 import '../widgets/onboarding/profile_uplad.dart';
@@ -14,6 +18,8 @@ class OnBoarding extends StatefulWidget {
 }
 
 class _OnBoardingState extends State<OnBoarding> {
+  String _username = "";
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,7 +43,9 @@ class _OnBoardingState extends State<OnBoarding> {
                 child: CustomTextField(
                   hint: 'What`s your name?',
                   height: 45.0,
-                  onchanged: (val) {},
+                  onchanged: (val) {
+                    _username = val;
+                  },
                   inputAction: TextInputAction.none,
                 ),
               ),
@@ -50,17 +58,36 @@ class _OnBoardingState extends State<OnBoarding> {
               Padding(
                 padding: EdgeInsets.only(left: 16.0, right: 16.0),
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    final error = _checkInputs();
+                    if (error.isNotEmpty) {
+                      final snackBar = SnackBar(
+                        content: Text(
+                          error,
+                          style: TextStyle(
+                              fontSize: 14.0, fontWeight: FontWeight.bold),
+                        ),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                      return;
+                    }
+
+                    await _connectSession();
+                  },
                   child: Container(
                     height: 45.0,
                     alignment: Alignment.center,
                     child: Text(
                       'Meet with me chat',
-                      style: Theme.of(context).textTheme.button?.copyWith(
-                            fontSize: 18.0,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme
+                          .of(context)
+                          .textTheme
+                          .button
+                          ?.copyWith(
+                        fontSize: 18.0,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -71,7 +98,19 @@ class _OnBoardingState extends State<OnBoarding> {
                     ),
                   ),
                 ),
-              )
+              ),
+
+              Spacer(),
+
+              BlocBuilder<OnBoardingCubit, OnBoardingState>(
+                  builder: (context, state) =>
+                  state is Loading
+                      ? Center(child: CircularProgressIndicator(),)
+                      : Container()),
+
+
+              Spacer(flex: 1),
+
             ],
           ),
         ),
@@ -85,7 +124,8 @@ class _OnBoardingState extends State<OnBoarding> {
       children: [
         Text(
           'Laba',
-          style: Theme.of(context)
+          style: Theme
+              .of(context)
               .textTheme
               .headline4
               ?.copyWith(fontWeight: FontWeight.bold),
@@ -96,7 +136,8 @@ class _OnBoardingState extends State<OnBoarding> {
         Logo(),
         Text(
           'Laba',
-          style: Theme.of(context)
+          style: Theme
+              .of(context)
               .textTheme
               .headline4
               ?.copyWith(fontWeight: FontWeight.bold),
@@ -105,4 +146,25 @@ class _OnBoardingState extends State<OnBoarding> {
       mainAxisAlignment: MainAxisAlignment.center,
     );
   }
+
+  _connectSession() async {
+    final profileImage = context
+        .read<ProfileImageCubit>()
+        .state;
+    await context.read<OnBoardingCubit>().connect(_username, profileImage!);
+  }
+
+  String _checkInputs() {
+    var error = '';
+    if (_username.isEmpty) {
+      error = 'Enter display name';
+    }
+    if (context
+        .read<ProfileImageCubit>()
+        .state == null) {
+      error = error + '\n' + 'Uploa profile image';
+    }
+    return error;
+  }
+
 }

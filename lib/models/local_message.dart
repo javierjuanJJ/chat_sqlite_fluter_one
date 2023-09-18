@@ -14,16 +14,19 @@ class LocalMessage{
   Map<String, dynamic> toMap() => {
     'chat_id': chatId,
     'id': message.id,
-    ...message.toJson(),
+    'sender': message.from,
+    'receiver' : message.to,
+    'contents': message.content,
     'receipt': receiptStatus.value(),
+    ...message.toJson(),
   };
 
   factory LocalMessage.fromMap(Map<String,dynamic> json){
     final message = Message(
-      from: json['from'],
-      to: json['to'],
-      timeStap: json['timeStap'],
-      content: json['content'],
+      from: json['sender'],
+      to: json['receiver'],
+      timeStap: json['received_at'],
+      content: json['contents'],
     );
 
     final localMessage = LocalMessage(json['chat_id'], message,

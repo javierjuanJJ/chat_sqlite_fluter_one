@@ -2,6 +2,7 @@ import 'package:chat2/colors.dart';
 import 'package:chat2/states_management/onboarding/onboarding_cubit.dart';
 import 'package:chat2/states_management/onboarding/onboarding_state.dart';
 import 'package:chat2/states_management/onboarding/profile_image_cubit.dart';
+import 'package:chat2/ui/pages/onboarding/on_boarding_router.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,7 +12,8 @@ import '../widgets/onboarding/profile_uplad.dart';
 import '../widgets/shared/custom_text.dart';
 
 class OnBoarding extends StatefulWidget {
-  const OnBoarding({super.key});
+  final IOnBoardingRouter router;
+  const OnBoarding(this.router);
 
   @override
   State<OnBoarding> createState() => _OnBoardingState();
@@ -102,11 +104,18 @@ class _OnBoardingState extends State<OnBoarding> {
 
               Spacer(),
 
-              BlocBuilder<OnBoardingCubit, OnBoardingState>(
+              BlocConsumer<OnBoardingCubit, OnBoardingState>(
+                  listener: (_,state) {
+                    if (state is OnBoardingSuccess){
+                      widget.router.onSessionSuccess(context, state.user);
+                    }
+                  },
                   builder: (context, state) =>
                   state is Loading
                       ? Center(child: CircularProgressIndicator(),)
-                      : Container()),
+                      : Container(),
+
+              ),
 
 
               Spacer(flex: 1),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:chat1/src/models/receipt.dart';
 import 'package:chat2/data/datasource/datasource_contract.dart';
 import 'package:chat2/models/chat.dart';
 import 'package:chat2/models/local_message.dart';
@@ -12,12 +13,20 @@ class SqlfliteDatasource implements IDatasource{
 
   @override
   Future<void> addChat(Chat chat) async {
-    await _db.insert('chats', chat.toMap(),conflictAlgorithm: ConflictAlgorithm.replace);
+    await _db.transaction((txn) async {
+      await txn.insert(
+          'chats',
+          chat.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.rollback);
+    });
+
   }
 
   @override
   Future<void> addMessage(LocalMessage message) async {
-    await _db.insert('messages', message.toMap(),conflictAlgorithm: ConflictAlgorithm.replace);
+    await _db.transaction((txn) async {
+      await txn.insert('messages', message.toMap(),conflictAlgorithm: ConflictAlgorithm.replace);
+    });
   }
 
   @override
@@ -50,12 +59,14 @@ class SqlfliteDatasource implements IDatasource{
       FROM messages
       WHERE receipt = ?
       GROUP BY chat_id
-      ''', ['delivered']);
+      ''', ['deliverred']);
       return chatWithLatestMessage.map<Chat>((row) {
-        final int? unread = int.tryParse((chatsWithUnreadMessages.firstWhere((element) => row['chat_id'] == element['chat_id'], orElse: () => {'unread': 0})['unread']).toString());
+        final int unread = chatsWithUnreadMessages.firstWhere(
+                (element) => row['chat_id'] == element['chat_id'],
+            orElse: () => {'unread': 0})['unread'] as int;
 
-        final chat = Chat.fromMap(row);
-        chat.unread = unread!;
+        final chat = Chat.fromMap({"id" : row['chat_id']});
+        chat.unread = unread;
         chat.mostRecent = LocalMessage.fromMap(row);
         return chat;
       }).toList();
@@ -114,6 +125,18 @@ class SqlfliteDatasource implements IDatasource{
       whereArgs: [message.message.id],
       conflictAlgorithm: ConflictAlgorithm.replace
     );
+  }
+
+  @override
+  Future<void> updateMessageReceipt(String messageId, ReceiptStatus status) {
+    return _db.transaction((txn) async {
+      await txn.update('messages',
+          {'receipt': status.value()}
+          ,where: 'id = ?',
+          whereArgs: [messageId],
+        conflictAlgorithm: ConflictAlgorithm.replace
+      );
+    });
   }
 
 }

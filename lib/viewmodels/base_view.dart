@@ -1,3 +1,4 @@
+import 'package:chat1/src/services/user/user_service_contract.dart';
 import 'package:chat2/data/datasource/datasource_contract.dart';
 import 'package:chat2/models/chat.dart';
 import 'package:chat2/models/local_message.dart';
@@ -5,7 +6,7 @@ import 'package:flutter/cupertino.dart';
 
 abstract class BaseViewModel {
   IDatasource _datasource;
-  BaseViewModel(this._datasource);
+  BaseViewModel(this._datasource, IUserService userService);
   @protected
   Future<void> addMessage(LocalMessage message) async{
     if (!await _isExistingChat(message.chatId)){

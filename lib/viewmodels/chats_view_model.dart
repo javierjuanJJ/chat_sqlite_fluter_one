@@ -5,8 +5,9 @@ import '../data/datasource/datasource_contract.dart';
 import 'base_view.dart';
 
 class Chat_View_Model extends BaseViewModel {
-  Chat_View_Model(this._datasource) : super(_datasource);
+  Chat_View_Model(this._datasource,this._userService) : super(_datasource, _userService);
   IDatasource _datasource;
+  IUserService _userService;
   String _chatId = '';
   int otherMessages = 0;
 

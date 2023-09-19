@@ -1,0 +1,26 @@
+import 'package:chat1/chat.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+
+abstract class IHomeRouter {
+  Future<void> onShowMessageThread(BuildContext context, User receiver, User me,
+      {required String chatId});
+}
+
+class HomeRouter implements IHomeRouter {
+  final Widget Function(User receiver, User me, {String chatId})
+      showMessageThread;
+
+  HomeRouter({required this.showMessageThread});
+
+  @override
+  Future<void> onShowMessageThread(BuildContext context, User receiver, User me,
+      {required String chatId}) async {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => showMessageThread(receiver, me, chatId: chatId),
+      ),
+    );
+  }
+}

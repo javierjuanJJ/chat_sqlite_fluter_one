@@ -13,29 +13,32 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../states_management/home/home_cubit.dart';
 
 class Home extends StatefulWidget {
-  const Home();
+  final User me;
+  const Home(this.me);
 
   @override
-  State<Home> createState() => _HomeState();
+  State<Home> createState() => _HomeState(this.me);
 }
 
 class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin {
+
+  User _user;
+
+  _HomeState(this._user);
+
   @override
   void initState() {
     super.initState();
-    context.read<ChatsCubit>().chats();
-    context.read<HomeCubit>().activeUsers();
-    final user = User.fromJson({
-      'id': "",
-      'active': true,
-      'photo_url': "",
-      'last_seen': DateTime.now(),
-    });
-    context.read<MessageBloc>().add(MessageEvent.onSunscibed(user));
-  }
+    _user = widget.me;
+    _initialSetup();
+
+    }
 
   @override
   Widget build(BuildContext context) {
+
+    super.build(context);
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -45,7 +48,7 @@ class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin {
             child: Row(
               children: [
                 ProfileImage(
-                  imageUrl: "",
+                  imageUrl: _user.photoUrl,
                   online: true,
                 ),
                 Padding(
@@ -53,7 +56,7 @@ class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin {
                   child: Column(
                     children: [
                       Text(
-                        'Jess',
+                        _user.username,
                         style: Theme.of(context).textTheme.caption?.copyWith(
                               fontSize: 14.0,
                               fontWeight: FontWeight.bold,
@@ -109,7 +112,7 @@ class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin {
         ),
         body: TabBarView(
           children: [
-            Chats(),
+            Chats(_user),
             ActiveUsers(),
           ],
         ),
@@ -119,5 +122,15 @@ class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin {
 
   @override
   // TODO: implement wantKeepAlive
-  bool get wantKeepAlive => throw UnimplementedError();
+  bool get wantKeepAlive => true;
+
+  void _initialSetup() async {
+    final user  =(!_user.active) ? context.read<HomeCubit>().connect(_user) : _user;
+
+    context.read<ChatsCubit>().chats();
+    context.read<HomeCubit>().activeUsers(_user);
+
+    context.read<MessageBloc>().add(MessageEvent.onSunscibed(_user));
+
+  }
 }

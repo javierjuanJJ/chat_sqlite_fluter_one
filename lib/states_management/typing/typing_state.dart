@@ -24,6 +24,9 @@ class TypingSentSuccess extends TypingNotificationState {
 
 class TypingReceivedSuccess extends TypingNotificationState {
   final TypingEvent _typingEvent;
+
+  TypingEvent get event => _typingEvent;
+
   const TypingReceivedSuccess(this._typingEvent);
   @override
   List<Object> get props => [_typingEvent];

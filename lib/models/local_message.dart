@@ -17,6 +17,7 @@ class LocalMessage{
     'sender': message.from,
     'receiver' : message.to,
     'contents': message.content,
+    'received_at': message.timeStap.toString(),
     'receipt': receiptStatus.value(),
     ...message.toJson(),
   };
@@ -25,7 +26,7 @@ class LocalMessage{
     final message = Message(
       from: json['sender'],
       to: json['receiver'],
-      timeStap: json['received_at'],
+      timeStap: DateTime.parse(json['received_at']),
       content: json['contents'],
     );
 

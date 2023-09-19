@@ -23,11 +23,14 @@ class MessageSentSuccess extends MessageState {
   const MessageSentSuccess(this._message);
   @override
   List<Object> get props => [_message];
+
+  Message get message => _message;
 }
 
 class MessageReceivedSuccess extends MessageState {
   final Message _message;
   const MessageReceivedSuccess(this._message);
+  Message get message => _message;
   @override
   List<Object> get props => [_message];
 }

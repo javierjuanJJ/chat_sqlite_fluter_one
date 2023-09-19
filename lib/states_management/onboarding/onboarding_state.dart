@@ -22,6 +22,9 @@ class Loading extends OnBoardingState {
 class OnBoardingSuccess extends OnBoardingState {
   final User _user;
   OnBoardingSuccess(this._user);
+
+  User get user => _user;
+
   @override
   // TODO: implement props
   List<Object?> get props => [_user];

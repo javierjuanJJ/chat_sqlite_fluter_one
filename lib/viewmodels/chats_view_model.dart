@@ -11,6 +11,9 @@ class Chat_View_Model extends BaseViewModel {
   String _chatId = '';
   int otherMessages = 0;
 
+
+  String get chatId => _chatId;
+
   Future<List<LocalMessage>> getMessages(String chatId) async {
     final messages = await _datasource.findMessages(chatId);
     if (messages.isNotEmpty) chatId = _chatId;
@@ -28,10 +31,19 @@ class Chat_View_Model extends BaseViewModel {
 
   Future<void> receivedMessage(Message message) async{
     LocalMessage localMessage = LocalMessage(message.from, message, ReceiptStatus.delicerres);
+
+    if (chatId.isEmpty){
+      _chatId = localMessage.chatId;
+    }
+
     if (localMessage.chatId != _chatId){
       otherMessages++;
     }
     await addMessage(localMessage);
+  }
+
+  Future<void> updateMessageReceipt(Receipt receipt) async{
+    await _datasource.updateMessageReceipt(receipt.messageId, receipt.status);
   }
 
 }

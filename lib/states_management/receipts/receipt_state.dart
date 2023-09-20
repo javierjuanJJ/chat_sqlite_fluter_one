@@ -24,6 +24,7 @@ class ReceiptSentSuccess extends ReceiptState {
 
 class ReceiptReceivedSuccess extends ReceiptState {
   final Receipt _Receipt;
+  Receipt get receipt => _Receipt;
   const ReceiptReceivedSuccess(this._Receipt);
   @override
   List<Object> get props => [_Receipt];

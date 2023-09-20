@@ -6,13 +6,18 @@ import 'package:chat2/data/services/image_uploader.dart';
 import 'package:chat2/states_management/home/chats_cubit.dart';
 import 'package:chat2/states_management/home/home_cubit.dart';
 import 'package:chat2/states_management/message/message_bloc.dart';
+import 'package:chat2/states_management/message_thread/message_thread_cubit.dart';
 import 'package:chat2/states_management/onboarding/onboarding_cubit.dart';
 import 'package:chat2/states_management/onboarding/profile_image_cubit.dart';
+import 'package:chat2/states_management/receipts/receipt_bloc.dart';
 import 'package:chat2/states_management/typing/typing_bloc.dart';
 import 'package:chat2/ui/pages/home/home/home.dart';
+import 'package:chat2/ui/pages/home/home_router.dart';
+import 'package:chat2/ui/pages/message_thread/message_thread.dart';
 import 'package:chat2/ui/pages/onboarding/on_boarding.dart';
 import 'package:chat2/ui/pages/onboarding/on_boarding_router.dart';
 import 'package:chat2/viewmodels/chat_view_model.dart';
+import 'package:chat2/viewmodels/chats_view_model.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rethink_db_ns/rethink_db_ns.dart';
@@ -33,7 +38,8 @@ class CompositionRoot{
   static late MessageBloc _messageBloc;
   static late TypingNotificationBloc _typingNotificationBloc;
   static late ITypingNotification _typingNotification;
-
+  static late ChatsCubit chatsCubit;
+  static late Chats_View_Model viewModel;
 
   static Widget start(){
     final user = _localCache.fetch('USER');
@@ -52,6 +58,9 @@ class CompositionRoot{
     _localCache = LocalCache(sp);
     _messageBloc = MessageBloc(_messageService);
     _typingNotificationBloc = TypingNotificationBloc(_typingNotification);
+
+    viewModel = Chats_View_Model(_datasource, _userService);
+    chatsCubit = ChatsCubit(viewModel);
   }
 
   static Widget composeOnBoardingUI(){
@@ -72,15 +81,30 @@ class CompositionRoot{
   static Widget composeHomeUi(User user){
     HomeCubit homeCubit = HomeCubit(_userService, _localCache);
     MessageBloc messageBloc = MessageBloc(_messageService);
-    Chats_View_Model viewModel = Chats_View_Model(_datasource, _userService);
-    ChatsCubit chatsCubit = ChatsCubit(viewModel);
+    IHomeRouter router = HomeRouter(showMessageThread: composeMessageThreadUi);
 
     return MultiBlocProvider(providers: [
       BlocProvider(create: (BuildContext context) => homeCubit),
       BlocProvider(create: (BuildContext context) => messageBloc),
       BlocProvider(create: (BuildContext context) => _typingNotificationBloc),
       BlocProvider(create: (BuildContext context) => chatsCubit)
-    ], child: Home(user));
+    ], child: Home(user, router));
   }
+
+  static Widget composeMessageThreadUi(User receiver,User user,{String? chatId}){
+    Chat_View_Model viewModel = Chat_View_Model(_datasource,_userService);
+    MessageThreadCubit messageThreadCubit = MessageThreadCubit(viewModel);
+    IReceiptService receiptService = ReceiptService(_r, _connection);
+    ReceiptBloc receiptBloc = ReceiptBloc(receiptService);
+
+    return MultiBlocProvider(providers: [
+      BlocProvider(create: (BuildContext context) => messageThreadCubit),
+      BlocProvider(create: (BuildContext context) => receiptBloc),
+
+    ], child: MessageThread(
+      receiver, user, _messageBloc, chatsCubit, _typingNotificationBloc, chatId: chatId.toString()
+    ));
+  }
+
 
 }

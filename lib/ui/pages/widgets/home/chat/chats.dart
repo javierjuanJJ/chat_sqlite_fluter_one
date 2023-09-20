@@ -4,6 +4,7 @@ import 'package:chat2/states_management/home/chats_cubit.dart';
 import 'package:chat2/states_management/typing/typing_bloc.dart';
 import 'package:chat2/theme.dart';
 import 'package:chat2/ui/pages/home/home/profile_image.dart';
+import 'package:chat2/ui/pages/home/home_router.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,8 +14,8 @@ import '../../../../../models/chat.dart';
 import '../../../../../states_management/message/message_bloc.dart';
 
 class Chats extends StatefulWidget {
-  const Chats(this.user);
-
+  const Chats(this.user, this.router);
+  final IHomeRouter router;
   final User user;
 
   @override
@@ -55,7 +56,19 @@ class _ChatsState extends State<Chats> {
   ListView _buildListView() {
     return ListView.separated(
       padding: EdgeInsets.only(top: 30.0, right: 16.0),
-        itemBuilder: (_, index) => _chatItem(chats[index]),
+        itemBuilder: (_, index) => GestureDetector(
+          child: _chatItem(chats[index]),
+          onTap: () async {
+            await this.widget.router.onShowMessageThread(
+                context,
+                _chatItem(chats[index].from),
+                widget.user,
+                chatId: chats[index].id
+            );
+
+            await context.read<ChatsCubit>().chats();
+          },
+        ),
         separatorBuilder: (_, __) => Divider(),
         itemCount: chats.length);
   }

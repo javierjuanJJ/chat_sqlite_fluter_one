@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:chat1/chat.dart';
 import 'package:chat2/colors.dart';
+import 'package:chat2/models/chat.dart';
 import 'package:chat2/states_management/home/chats_cubit.dart';
 import 'package:chat2/states_management/message/message_bloc.dart';
 import 'package:chat2/states_management/message_thread/message_thread_cubit.dart';
@@ -11,6 +12,7 @@ import 'package:chat2/theme.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 
 import '../../../models/local_message.dart';
 import '../../../states_management/shared/header_status.dart';
@@ -18,17 +20,17 @@ import '../widgets/message_thread/receiver_message.dart';
 import '../widgets/message_thread/sender_message.dart';
 
 class MessageThread extends StatefulWidget {
-  final User receiver;
+  final List<User> receivers;
   final User me;
-  final String chatId;
+  final Chat chat;
   final MessageBloc messageBloc;
   final TypingNotificationBloc typingNotificationBloc;
   final ChatsCubit chatsCubit;
 
-  const MessageThread(this.receiver, this.me, this.messageBloc, this.chatsCubit,
+  const MessageThread(this.receivers, this.me, this.messageBloc,
+      this.chatsCubit,
       this.typingNotificationBloc,
-      {String chatId = ''})
-      : this.chatId = chatId;
+      this.chat);
 
   @override
   State<MessageThread> createState() => _MessageThreadState();
@@ -39,23 +41,27 @@ class _MessageThreadState extends State<MessageThread> {
   final TextEditingController _textEditingController = TextEditingController();
 
   String chatId = '';
-  late User receiver;
+  late List<User> receivers;
   late StreamSubscription _subscription;
   late List<LocalMessage> messages = [];
   late Timer _startTypingTimer;
   late Timer _stopTypingTimer;
+  late String typing;
 
   @override
   void initState() {
     super.initState();
-    chatId = widget.chatId;
+    chatId = widget.chat.id;
+    receivers = widget.receivers;
+    receivers.removeWhere((element) => element.id == widget);
     _updateOnMessageReceived();
     _updateOnReceiptReceived();
-    receiver = widget.receiver;
+    receivers = widget.receivers;
+    receivers.removeWhere((element) => element.id == widget.me.id);
     context.read<ReceiptBloc>().add(ReceiptEvent.onSunscibed(widget.me));
     widget.typingNotificationBloc.add(TypingNotificationEvent.onSunscibed(
         widget.me,
-        usersWithChat: [receiver.id]));
+        usersWithChat: receivers.map((e) => e.id).toList()));
   }
 
   @override
@@ -75,18 +81,35 @@ class _MessageThreadState extends State<MessageThread> {
                   Navigator.of(context).pop(true);
                 }),
             Expanded(
-                child: BlocBuilder<TypingNotificationBloc, TypingNotificationState>(
-                  bloc: widget.typingNotificationBloc,
-                  builder: (_, state) {
-                    bool typing =false;
-                    if (state is TypingReceivedSuccess &&
-                    state.event.event == Typing.start &&
-                        state.event.from == receiver.id){
-                      typing = true;
+              child: BlocBuilder<TypingNotificationBloc,
+                  TypingNotificationState>(
+                bloc: widget.typingNotificationBloc,
+                builder: (_, state) {
+                  if (state is TypingReceivedSuccess &&
+                      state.event.event == Typing.start &&
+                      state.event.chatId == chatId) {
+                    if (widget.chat.type == ChatType.individual) {
+                      typing = 'Typing...';
                     }
-                    return HeaderStatus(receiver.username, receiver.photoUrl, receiver.active, lastSeen: receiver.lastSeen, typing: typing,);
-                  },
-                ),),
+                    else {
+                      typing = 'last seen: ${DateFormat.yMd().add_jm().format(
+                          receivers.first.lastSeen)}';
+                    }
+                  }
+                  return HeaderStatus(
+                    widget.chat.name ?? receivers.first.username,
+                    (widget.chat.type == ChatType.individual ? receivers.first
+                        .photoUrl : null).toString(),
+                    widget.chat.type == ChatType.individual ? receivers.first
+                        .active : false,
+                    description: widget.chat.type == ChatType.individual ? ""
+                        : receivers.fold(
+                        '', (previousValue, element) => previousValue + ' , ' +
+                        element.username).replaceFirst(',', '').trim(),
+                    typing: typing,
+                  );
+                },
+              ),),
           ],
         ),
       ),
@@ -104,10 +127,31 @@ class _MessageThreadState extends State<MessageThread> {
                   this.messages = messages;
                   if (this.messages.isEmpty) {
                     return Container(
+                      alignment: Alignment.topCenter,
+                      padding: EdgeInsets.only(top: 30),
                       color: Colors.transparent,
+                      child: widget.chat.type == ChatType.group ?
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: kPrimary.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Text(
+                            'Group created',
+                            style: Theme
+                                .of(context)
+                                .textTheme
+                                .caption
+                                ?.copyWith(color: Colors.white),
+                          ),
+                        ),
+                      ): Container(),
                     );
                   }
-                  WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
+                  WidgetsBinding.instance.addPostFrameCallback((_) =>
+                      _scrollToEnd());
                   return _buildListOfMessages();
                 },
               ),
@@ -183,6 +227,7 @@ class _MessageThreadState extends State<MessageThread> {
 
       if (state is MessageSentSuccess) {
         await messageThreadCubit.viewModel.sentMessage(state.message);
+        widget.chatsCubit.chats();
       }
       if (chatId.isEmpty) {
         chatId = messageThreadCubit.viewModel.chatId;
@@ -193,7 +238,10 @@ class _MessageThreadState extends State<MessageThread> {
 
   void _updateOnReceiptReceived() {
     final messageThreadCubit = context.read<MessageThreadCubit>();
-    context.read<ReceiptBloc>().stream.listen((state) async {
+    context
+        .read<ReceiptBloc>()
+        .stream
+        .listen((state) async {
       if (state is ReceiptReceivedSuccess) {
         await messageThreadCubit.viewModel.updateMessageReceipt(state.receipt);
         messageThreadCubit.messages(chatId);
@@ -217,13 +265,13 @@ class _MessageThreadState extends State<MessageThread> {
       borderSide: isLightTheme(context)
           ? BorderSide.none
           : BorderSide(
-              color: Colors.grey.withOpacity(0.3),
-            ),
+        color: Colors.grey.withOpacity(0.3),
+      ),
     );
     return Focus(
       onFocusChange: (focus) {
-        if(_startTypingTimer == null ||
-            (_startTypingTimer != null && focus)){
+        if (_startTypingTimer == null ||
+            (_startTypingTimer != null && focus)) {
           return;
         }
         _stopTypingTimer?.cancel();
@@ -234,7 +282,10 @@ class _MessageThreadState extends State<MessageThread> {
         textInputAction: TextInputAction.newline,
         keyboardType: TextInputType.multiline,
         maxLines: null,
-        style: Theme.of(context).textTheme.caption,
+        style: Theme
+            .of(context)
+            .textTheme
+            .caption,
         cursorColor: kPrimary,
         onChanged: _sendTypingNotification,
         decoration: InputDecoration(
@@ -246,20 +297,32 @@ class _MessageThreadState extends State<MessageThread> {
             enabledBorder: _border,
             filled: true,
             fillColor:
-                isLightTheme(context) ? kPrimary.withOpacity(0.1) : kBubbleDark,
+            isLightTheme(context) ? kPrimary.withOpacity(0.1) : kBubbleDark,
             focusedBorder: _border),
       ),
     );
   }
 
-  Widget _buildListOfMessages() => ListView.builder(
+  Widget _buildListOfMessages() =>
+      ListView.builder(
         padding: EdgeInsets.only(top: 16, left: 16, bottom: 20),
         itemBuilder: (__, idx) {
-          if (messages[idx].message.from == receiver.id) {
+          if (receivers.any((element) => element.id == messages[idx].message.from)) {
             _sendReceipt(messages[idx]);
+            final receiver = receivers.firstWhere((element) => element.id == messages[idx].message.from);
+
+            final String color = widget.chat.membersId?.firstWhere(
+                    (element) => element.containsKey(receiver.id)
+            )?.values?.first;
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
-              child: ReceiverMessage(messages[idx], receiver.photoUrl),
+              child: ReceiverMessage(
+                  messages[idx],
+                receiver,
+                widget.chat.type,
+                color: ChatType.group == widget.chat.type ? Color(int.tryParse(color)!) : null,
+              ),
             );
           } else {
             return Padding(
@@ -275,16 +338,15 @@ class _MessageThreadState extends State<MessageThread> {
       );
 
   void _sendMessage() {
-    if (_textEditingController.text.trim().isEmpty) {
+    if (_textEditingController.text
+        .trim()
+        .isEmpty) {
       return;
     }
-    final message = Message(
-        from: widget.me.id,
-        to: receiver.id,
-        timeStap: DateTime.now(),
-        content: _textEditingController.text);
+    final messages = receivers.map((e) => Message(from: widget.me.id, to: e.id, timeStap: DateTime.now(), content: _textEditingController.text, groupId: (widget.chat.type == ChatType.group ? widget.chat.id : null)!.toString())).toList();
 
-    final sendMessageEvent = MessageEvent.onMessageSent(message);
+    final sendMessageEvent = MessageEvent.onMessageSent(
+        messages);
     widget.messageBloc.add(sendMessageEvent);
 
     _textEditingController.clear();
@@ -294,11 +356,12 @@ class _MessageThreadState extends State<MessageThread> {
   }
 
   _scrollToEnd() {
-    _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: Duration(milliseconds: 200), curve: Curves.easeInOut);
+    _scrollController.animateTo(_scrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 200), curve: Curves.easeInOut);
   }
 
   _sendReceipt(LocalMessage message) async {
-    if (message.receiptStatus == ReceiptStatus.read){
+    if (message.receiptStatus == ReceiptStatus.read) {
       return;
     }
     final receipt = Receipt(
@@ -308,19 +371,28 @@ class _MessageThreadState extends State<MessageThread> {
       timestamp: DateTime.now(),
     );
     context.read<ReceiptBloc>().add(ReceiptEvent.onReceiptSent(receipt));
-    await context.read<MessageThreadCubit>().viewModel.updateMessageReceipt(receipt);
+    await context
+        .read<MessageThreadCubit>()
+        .viewModel
+        .updateMessageReceipt(receipt);
   }
 
-  void _dispatchTyping(Typing event){
-    final typing = TypingEvent(from: widget.me.id, to: receiver.id, event: event);
-    widget.typingNotificationBloc.add(TypingNotificationEvent.onTypingSent(typing));
+  void _dispatchTyping(Typing event) {
+    final chatid = widget.chat.type == ChatType.group ? chatId : widget.me.id;
+    final typings =receivers.map((e) => TypingEvent(
+        chatId: chatid, from: widget.me.id, to: e.id, event: event)) ;
+
+    widget.typingNotificationBloc.add(
+        TypingNotificationEvent.onTypingSent(typing as List<TypingEvent>));
   }
 
-  void _sendTypingNotification(String text){
-    if(text.trim().isEmpty || messages.isEmpty){
+  void _sendTypingNotification(String text) {
+    if (text
+        .trim()
+        .isEmpty || messages.isEmpty) {
       return;
     }
-    if(_startTypingTimer?.isActive ?? false){
+    if (_startTypingTimer?.isActive ?? false) {
       return;
     }
     if (_stopTypingTimer?.isActive ?? false) {
@@ -328,12 +400,12 @@ class _MessageThreadState extends State<MessageThread> {
     }
     _dispatchTyping(Typing.start);
     _startTypingTimer = Timer(
-      Duration(seconds: 5),
-        () {}
+        Duration(seconds: 5),
+            () {}
     );
     _stopTypingTimer = Timer(
         Duration(seconds: 6),
-        () => _dispatchTyping(Typing.stop)
+            () => _dispatchTyping(Typing.stop)
     );
   }
 

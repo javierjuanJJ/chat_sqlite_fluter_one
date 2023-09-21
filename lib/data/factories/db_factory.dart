@@ -18,7 +18,11 @@ class LocalDatabaseFactory {
     await db.execute(
         """CREATE TABLE chats(
           id TEXT PRIMARY KEY,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+          name TEXT,
+          type TEXT,
+          members TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         )"""
     ).then((_) => print('creating table chats ....')).catchError((e) => print('Error creating chats table: $e'));
   }

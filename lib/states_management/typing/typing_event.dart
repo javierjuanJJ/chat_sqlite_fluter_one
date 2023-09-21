@@ -4,7 +4,7 @@ abstract class TypingNotificationEvent extends Equatable{
   const TypingNotificationEvent();
 
   factory TypingNotificationEvent.onSunscibed(User user, {required List<String> usersWithChat}) => Sunscribed(user, usersWithChat: usersWithChat);
-  factory TypingNotificationEvent.onTypingSent(TypingEvent typing) => TypingSent(typing);
+  factory TypingNotificationEvent.onTypingSent(List<TypingEvent> events) => TypingSent(events);
 
   @override
   List<Object> get props => [];
@@ -21,10 +21,10 @@ class NotSunscribed extends TypingNotificationEvent {
 
 }
 class TypingSent extends TypingNotificationEvent {
-  final TypingEvent receipt;
-  const TypingSent(this.receipt);
+  final List<TypingEvent> events;
+  const TypingSent(this.events);
   @override
-  List<Object> get props => [receipt];
+  List<Object> get props => [events];
 }
 
 class TypingReceived extends TypingNotificationEvent {

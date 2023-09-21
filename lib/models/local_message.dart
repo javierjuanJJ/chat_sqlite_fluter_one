@@ -19,6 +19,7 @@ class LocalMessage{
     'contents': message.content,
     'received_at': message.timeStap.toString(),
     'receipt': receiptStatus.value(),
+    'group_id': message.groupId,
     ...message.toJson(),
   };
 
@@ -28,6 +29,7 @@ class LocalMessage{
       to: json['receiver'],
       timeStap: DateTime.parse(json['received_at']),
       content: json['contents'],
+      groupId: json['group_id'],
     );
 
     final localMessage = LocalMessage(json['chat_id'], message,

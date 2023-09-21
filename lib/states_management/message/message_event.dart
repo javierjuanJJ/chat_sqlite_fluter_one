@@ -3,7 +3,7 @@ abstract class MessageEvent extends Equatable{
   const MessageEvent();
 
   factory MessageEvent.onSunscibed(User user) => Sunscribed(user);
-  factory MessageEvent.onMessageSent(Message message) => MessageSent(message);
+  factory MessageEvent.onMessageSent(List<Message> messages) => MessageSent(messages);
 
   @override
   List<Object> get props => [];
@@ -17,10 +17,10 @@ class Sunscribed extends MessageEvent {
 }
 
 class MessageSent extends MessageEvent {
-  final Message message;
-  const MessageSent(this.message);
+  final List<Message> messages;
+  const MessageSent(this.messages);
   @override
-  List<Object> get props => [message];
+  List<Object> get props => [messages];
 }
 
 class _MessageReceived extends MessageEvent {

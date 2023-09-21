@@ -28,7 +28,7 @@ class TypingNotificationBloc extends Bloc<TypingNotificationEvent, TypingNotific
       yield TypingNotificationState.received(typingEvent.event);
     }
     if (typingEvent is TypingSent){
-      await _typingService.send(event: typingEvent.receipt);
+      await _typingService.send(events: typingEvent.events);
       yield TypingNotificationState.sent();
     }
 

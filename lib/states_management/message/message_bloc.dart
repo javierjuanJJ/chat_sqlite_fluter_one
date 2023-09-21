@@ -29,7 +29,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     }
     if (event is MessageSent) {
       final Message message =
-          (await _messageService.send(event.message)) as Message;
+          (await _messageService.send(event.messages)) as Message;
       yield MessageState.sent(message);
     }
   }

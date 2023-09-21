@@ -1,6 +1,7 @@
 import 'dart:html';
 
 import 'package:chat1/chat.dart';
+import 'package:chat2/models/chat.dart';
 import 'package:chat2/states_management/home/home_cubit.dart';
 import 'package:chat2/states_management/home/home_state.dart';
 import 'package:chat2/ui/pages/home/home/profile_image.dart';
@@ -52,7 +53,11 @@ class _ActiveUsersState extends State<ActiveUsers> {
     return ListView.separated(
         itemBuilder: (BuildContext context, _index) => GestureDetector(
           child: _listItem(users[_index]),
-          onTap: () => this.widget.router.onShowMessageThread(context, users[_index], widget.me, chatId: users[_index].id),
+          onTap: () => this.widget.router.onShowMessageThread(
+              context,
+              [users[_index]],
+              widget.me,
+              Chat(users[_index].id, ChatType.individual)),
         ),
         separatorBuilder: (_, __) => Divider(),
         itemCount: users.length);

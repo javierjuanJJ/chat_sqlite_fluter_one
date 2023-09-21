@@ -8,16 +8,18 @@ class HeaderStatus extends StatelessWidget {
   final String username;
   final String imageUrl;
   final bool online;
-  final DateTime? lastSeen;
-  final bool? typing;
+  final String? description;
+  final String? typing;
 
   const HeaderStatus(
     this.username,
     this.imageUrl,
     this.online, {
-    this.lastSeen,
+    this.description,
     this.typing,
   });
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -54,11 +56,11 @@ class HeaderStatus extends StatelessWidget {
                 ? Text(
                     online
                         ? "Online"
-                        : "Last seen ${DateFormat.yMd().add_jm().format(lastSeen!)}",
+                        : description.toString(),
                     style: Theme.of(context).textTheme.caption,
                   )
                 : Text(
-                    'Typing...',
+                    typing!,
                     style: Theme.of(context).textTheme.caption?.
                     copyWith(fontStyle: FontStyle.italic),
                   ),

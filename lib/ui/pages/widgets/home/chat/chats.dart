@@ -1,6 +1,7 @@
 import 'package:chat1/chat.dart';
 import 'package:chat2/colors.dart';
 import 'package:chat2/states_management/home/chats_cubit.dart';
+import 'package:chat2/states_management/message_group/message_group_bloc.dart';
 import 'package:chat2/states_management/typing/typing_bloc.dart';
 import 'package:chat2/theme.dart';
 import 'package:chat2/ui/pages/home/home/profile_image.dart';
@@ -12,6 +13,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../../models/chat.dart';
 import '../../../../../states_management/message/message_bloc.dart';
+import '../../../../../utils/random_color_generator.dart';
 
 class Chats extends StatefulWidget {
   const Chats(this.user, this.router);
@@ -43,10 +45,14 @@ class _ChatsState extends State<Chats> {
       if (this.chats.isEmpty) {
         return Container();
       }
+      List<String> userIds = [];
+      chats.forEach((chat) {
+        userIds += chat.members!.map((e) => e.id).toList();
+      });
       context.read<TypingNotificationBloc>().add(
         TypingNotificationEvent.onSunscibed(
             widget.user,
-            usersWithChat: chats.map((e) => e.from.id).toList()
+            usersWithChat: userIds.toSet().toList()
         ));
 
       return _buildListView();
@@ -63,7 +69,7 @@ class _ChatsState extends State<Chats> {
                 context,
                 _chatItem(chats[index].from),
                 widget.user,
-                chatId: chats[index].id
+                chats[index]
             );
 
             await context.read<ChatsCubit>().chats();
@@ -77,12 +83,12 @@ class _ChatsState extends State<Chats> {
     return ListTile(
       contentPadding: EdgeInsets.only(left: 16.0),
       leading: ProfileImage(
-        imageUrl: chat.from.photoUrl,
-        online: chat.from.active,
+        imageUrl: chat.type == ChatType.individual ? chat.members?.first.photoUrl : null,
+        online: chat.type == ChatType.individual ? chat.members?.first.active : null,
       ),
       title: Text(
         chat.from.username,
-        style: Theme.of(context).textTheme.subtitle2?.copyWith(
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: isLightTheme(context) ? Colors.black : Colors.white,
             ),
@@ -93,7 +99,7 @@ class _ChatsState extends State<Chats> {
           if(
           state is TypingReceivedSuccess &&
               state.event.event == Typing.start &&
-              state.event.from == chat.from.id
+              state.event.chatId == chat.id
           ){
             this.typingEvents.add(state.event.from);
           }
@@ -101,24 +107,43 @@ class _ChatsState extends State<Chats> {
           if(
           state is TypingReceivedSuccess &&
               state.event.event == Typing.stop &&
-              state.event.from == chat.from.id
+              state.event.chatId == chat.id
           ){
             this.typingEvents.remove(state.event.from);
           }
 
-          if (this.typingEvents.contains(chat.from.id)){
-            return Text(
-              'Typing...',
-              style: Theme.of(context)
-                .textTheme
-                .caption
-                ?.copyWith(fontStyle: FontStyle.italic)
-            );
+          if (this.typingEvents.contains(chat.id)){
+            switch(chat.type) {
+              case ChatType.group:
+                final st = state as TypingReceived;
+                final username = chat.members?.firstWhere((element) => element.id == st.event.from);
+                return Text(
+
+                    '$username is tyyping...',
+                    style: Theme.of(context)
+                        .textTheme
+                        .caption
+                        ?.copyWith(fontStyle: FontStyle.italic)
+                );
+              case ChatType.individual:
+                return Text(
+
+                    'Typing...',
+                    style: Theme.of(context)
+                        .textTheme
+                        .caption
+                        ?.copyWith(fontStyle: FontStyle.italic)
+                );
+            }
+
           }
 
-
+          String? username2 = chat.mostRecent != null
+                ? chat.type == ChatType.individual
+                  ? chat.mostRecent?.message.content : (chat.members
+            ?.firstWhere((element) => element.id == chat.mostRecent?.message.from,))!.toString() + ': ' + chat.mostRecent!.message.content : 'Group created';
           return Text(
-            chat.mostRecent.message.content,
+            username2!,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             softWrap: true,
@@ -132,13 +157,17 @@ class _ChatsState extends State<Chats> {
       trailing: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(
-            DateFormat('h:mm: a').format(chat.mostRecent.message.timeStap),
-            style: Theme.of(context).textTheme.overline?.copyWith(
-                  color:
-                      isLightTheme(context) ? Colors.black54 : Colors.white70,
-                ),
-          ),
+          if (chat.mostRecent != null)
+            Text(
+                        DateFormat('h:mm: a')
+                            .format(chat.mostRecent!.message.timeStap),
+                        style: Theme.of(context).textTheme.overline?.
+                        copyWith(
+                              color:
+                                  isLightTheme(context) ? Colors.black54 : Colors.white70,
+                            ),
+                      )
+          ,
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: ClipRRect(
@@ -171,6 +200,22 @@ class _ChatsState extends State<Chats> {
         await chatsCubit.viewModel.receivedMessage(state.message);
         chatsCubit.chats();
       }
+    });
+
+    context.read<MessageGroupBloc>().stream.listen((state)async {
+
+      if (state is MessageGroupReceived){
+        final group = state.group;
+        group.members.removeWhere((element) => element == widget.user.id);
+        final membersId = group.members.
+      map((e) => {
+        e: RandomColorGenerator.getColor().value.toString()
+        }).toList();
+        final chat = Chat(group.id, ChatType.group,name: group.name, membersId: membersId);
+        await chatsCubit.viewModel.createNewChat(chat);
+        chatsCubit.chats();
+      }
+
     });
 
   }
